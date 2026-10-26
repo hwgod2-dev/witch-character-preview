@@ -1,0 +1,11 @@
+@media(max-width:720px){
+ #studio{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+ .stage{position:relative;flex:0 0 62dvh;height:62dvh;min-height:0}
+ aside{flex:1;min-height:0;overflow-y:auto;padding:14px 20px 22px}
+ .stage-caption{display:none}.aside-top{display:none}
+ .stage-footer{font-size:8px;left:15px;right:15px;bottom:4px}
+ .stage canvas{height:calc(100% - 90px)}
+ .view-tools{bottom:18px;padding:4px;width:calc(100% - 20px);max-width:480px;flex-wrap:wrap;justify-content:center}.view-tools button{padding:7px 7px;font-size:10px}
+ .controls{padding:18px 0}.expressions{gap:5px}.expressions button{padding:10px 0}
+ header{top:13px;left:18px}.brand{font-size:10px}.brand small{font-size:7px;margin-top:4px}
+}

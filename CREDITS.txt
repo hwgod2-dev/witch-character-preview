@@ -1,0 +1,3 @@
+Three.js r180 and bundled addons: MIT; see vendor/LICENSE.
+Character production: this project. Original design inspired by the user-provided game character.
+Upper-pose references: Mixamo Catwalk sequences, retargeted and locally adjusted. No source FBX or model weights included.
