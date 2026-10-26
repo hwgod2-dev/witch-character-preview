@@ -21,6 +21,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.08;
+if(embedded){controls.enableZoom=false;controls.enablePan=false;canvas.style.touchAction='pan-y';}
 controls.minDistance=.35;controls.maxDistance=7;controls.maxPolarAngle=Math.PI*.88;controls.autoRotateSpeed=.65;
 const root=new THREE.Group();scene.add(root);
 scene.add(new THREE.HemisphereLight(0xd8e5e0,0x423a31,.8));
@@ -167,8 +168,9 @@ function setMode(mode){state.mode=mode;state.pointer.set(0,0);state.look.set(0,0
   if(embedded){$('embedMode').textContent=mode==='live'?'360도 감상':'살아있는 캐릭터';$('embedMode').setAttribute('aria-pressed',String(mode==='live'));}
 }
 function setView(view){
+  state.view=view;
   const target=view==='portrait'?new THREE.Vector3(.01,1.35,-.03):['face','nape','beauty'].includes(view)?new THREE.Vector3(.01,1.49,-.03):new THREE.Vector3(0,1.0,0);
-  const pos={portrait:[.04,1.40,Math.max(1.85,1.15/camera.aspect)],full:[1.5,1.6,3.35],face:[.03,1.47,1.2],beauty:[.03,1.50,.70],nape:[.01,1.53,-1.06],front:[0,1.45,3.5],back:[0,1.55,-3.5],side:[3.5,1.5,0]}[view]||[0,1.45,3.5];
+  const pos={portrait:[.04,1.40,Math.max(1.85,1.65/camera.aspect)],full:[1.5,1.6,3.35],face:[.03,1.47,1.2],beauty:[.03,1.50,.70],nape:[.01,1.53,-1.06],front:[0,1.45,3.5],back:[0,1.55,-3.5],side:[3.5,1.5,0]}[view]||[0,1.45,3.5];
   camera.position.set(...pos);controls.target.copy(target);controls.update();
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
 }
@@ -244,7 +246,7 @@ if(embedded){
   $('embedPause').onclick=()=>$('pause').click();
   new IntersectionObserver(entries=>{embedVisible=entries[0].isIntersecting;previous=performance.now();if(braid)braid.accumulator=0;if(shortHair)shortHair.accumulator=0;}).observe(canvas);
 }
-const resize=()=>{const box=canvas.getBoundingClientRect();renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix();};
+const resize=()=>{const box=canvas.getBoundingClientRect();renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix();if(embedded&&state.ready)setView(state.view||'portrait');};
 new ResizeObserver(resize).observe(canvas.parentElement);resize();
 let previous=performance.now(),frames=0,fpsStart=previous,renderFailures=[];
 window.addEventListener('error',event=>renderFailures.push(event.message));
