@@ -1,7 +1,7 @@
 import * as THREE from '../../vendor/three.module.js';
 export async function installUpperChoices(studio){
  const data=await(await fetch('./assets/approved_upper_v07/poses.json')).json();let current='current';
- const corrections=await(await fetch('./assets/approved_upper_v07/correctives.json')).json(),bytes=await(await fetch('./assets/approved_upper_v07/correctives.bin')).arrayBuffer();
+ const corrections=await(await fetch('./assets/approved_upper_v07/correctives.json')).json(),bytes=await(studio.loadAssetBuffer?studio.loadAssetBuffer('assets/approved_upper_v07/correctives.bin'):(await fetch('./assets/approved_upper_v07/correctives.bin')).arrayBuffer());
  const original=new Map();for(const rows of Object.values(corrections.poses))for(const row of rows){if(!original.has(row.part)){const g=studio.meshes[row.part].geometry;original.set(row.part,{position:new Float32Array(g.attributes.position.array),normal:new Float32Array(g.attributes.normal.array)});}}
  function surface(id){for(const [part,old]of original){const g=studio.meshes[part].geometry,row=corrections.poses[id]?.find(r=>r.part===part);for(const key of ['position','normal']){const src=row?new Float32Array(bytes,row[key].offset,row[key].count):old[key];g.attributes[key].array.set(src);g.attributes[key].needsUpdate=true;}}}
  const all={current:{}};for(const pose of data.poses)all[pose.id]=pose.bones;
@@ -9,5 +9,6 @@ export async function installUpperChoices(studio){
  document.querySelector('aside .mode-tabs').before(panel);const label=panel.querySelector('#upperSource');
  panel.querySelectorAll('button').forEach(button=>button.onclick=()=>{current=button.dataset.upper;surface(current);studio.setMode('orbit');panel.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));const pose=data.poses.find(p=>p.id===current);label.textContent=pose?`${pose.title} / Mixamo ${pose.clip}, ${pose.source_frame}프레임`:'현재 승인한 팔·손 자세';});
  const m=new THREE.Matrix4();const refs=new Map(studio.bones.map(b=>[b.name,b]));
+ if(studio.embedded){panel.querySelector('[data-upper="C"]').click();}
  return {update(){for(const [name,pose]of Object.entries(all[current])){const bone=refs.get(name);if(bone){m.fromArray(pose.matrix).decompose(bone.position,bone.quaternion,bone.scale);bone.updateMatrix();}}}};
 }

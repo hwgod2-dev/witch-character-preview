@@ -1,0 +1,28 @@
+/* Compact, self-contained layout for the Tistory article iframe. */
+html[data-embed=true],html[data-embed=true] body{height:100%;overflow:hidden}
+html[data-embed=true] #studio{display:block;height:100dvh;min-height:0}
+html[data-embed=true] .stage{position:relative;height:100dvh;min-height:0}
+html[data-embed=true] .stage canvas{width:100%;height:100%;touch-action:pan-y}
+html[data-embed=true] aside,html[data-embed=true] .stage-caption,html[data-embed=true] .local{display:none!important}
+html[data-embed=true] header{top:16px;left:20px;right:20px}
+html[data-embed=true] .brand{font-size:10px;letter-spacing:1.4px;pointer-events:none}
+html[data-embed=true] .brand small{font-size:7px;letter-spacing:1.8px;margin-top:4px}
+html[data-embed=true] .view-tools{top:16px;bottom:auto;left:auto;right:16px;transform:none;max-width:220px;width:auto;flex-wrap:wrap;justify-content:flex-end;padding:3px;backdrop-filter:none;background:#152326de}
+html[data-embed=true] .view-tools button{font-size:11px;padding:7px 9px}
+html[data-embed=true] .view-tools [data-view=beauty],html[data-embed=true] .view-tools [data-view=nape],html[data-embed=true] .view-tools [data-view=side],html[data-embed=true] .view-tools [data-view=front],html[data-embed=true] #rotate{display:none}
+.embed-controls{position:absolute;bottom:30px;left:16px;right:16px;padding:10px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;background:#142225ec;border:1px solid #ffffff20;border-radius:12px}
+.embed-expressions,.embed-actions{display:flex;gap:5px;justify-content:center}
+.embed-controls button{font-size:12px;padding:9px 12px;border-color:#ffffff25;min-height:36px}
+.embed-actions button{color:#d0e1d4}
+.embed-hint{position:absolute;bottom:4px;left:12px;right:12px;text-align:center;font-size:10px;color:#c1cfca;margin:0;pointer-events:none}
+html[data-embed=true] .stage-footer{bottom:auto;top:64px;left:20px;right:20px;font-size:9px;color:#aabdb4}
+@media(max-width:480px){
+ html[data-embed=true] header{left:12px;top:12px}.brand .sigil{display:none}
+ html[data-embed=true] .view-tools{top:12px;right:10px}
+ html[data-embed=true] .view-tools button{padding:7px;font-size:10px}
+ html[data-embed=true] .brand small{padding-left:0}
+ html[data-embed=true] .stage-footer{top:57px;left:12px;right:12px}
+ .embed-controls{left:8px;right:8px;padding:8px;gap:7px;bottom:32px}
+ .embed-controls button{padding:8px 10px;font-size:11px}
+ .embed-hint{font-size:9px;bottom:8px}
+}

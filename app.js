@@ -1,4 +1,4 @@
-import {installUpperChoices} from './assets/approved_upper_v07/upper_choices.js';
+import {installUpperChoices} from './assets/approved_upper_v07/upper_choices.js?v=blog-embed-v01';
 let upperChoices=null;
 import {installPendantReplay} from './assets/pendant_playback_v06.js';
 let pendantReplay=null;
@@ -11,10 +11,12 @@ import { FaceSurface } from './assets/face_surface.js';
 import { StudioLighting } from './assets/studio_lighting.js';
 
 const $=id=>document.getElementById(id), canvas=$('canvas');
+const embedded=document.documentElement.dataset.embed==='true';
+let liteConfig=null, embedVisible=true;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(35,1,.08,12);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio,1.5),2));
+renderer.setPixelRatio(embedded?Math.min(devicePixelRatio,1.25):Math.min(Math.max(devicePixelRatio,1.5),2));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -24,7 +26,7 @@ const root=new THREE.Group();scene.add(root);
 scene.add(new THREE.HemisphereLight(0xd8e5e0,0x423a31,.8));
 function light(color,intensity,position){const l=new THREE.DirectionalLight(color,intensity);l.position.set(...position);scene.add(l);return l;}
 const key=light(0xffefd8,1.6,[2,3,3]);key.castShadow=true;
-key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-1.5;key.shadow.camera.right=1.5;key.shadow.camera.top=2.2;key.shadow.camera.bottom=-1.5;key.shadow.camera.near=.1;key.shadow.camera.far=12;key.shadow.bias=-.00008;key.shadow.normalBias=.003;
+key.shadow.mapSize.set(embedded?1024:2048,embedded?1024:2048);key.shadow.camera.left=-1.5;key.shadow.camera.right=1.5;key.shadow.camera.top=2.2;key.shadow.camera.bottom=-1.5;key.shadow.camera.near=.1;key.shadow.camera.far=12;key.shadow.bias=-.00008;key.shadow.normalBias=.003;
 light(0xc4e5ed,.6,[-3,2,1]);light(0xe6cda9,1.4,[-1,3,-3]);
 const room=new THREE.Scene();room.background=new THREE.Color(.2,.22,.22);
 for(const [position,size,intensity] of [[[3,3,2],[4,5],2],[[-4,2,1],[3,4],1],[[0,4,-3],[4,3],1.5]]){
@@ -45,6 +47,7 @@ const faceSurface=new FaceSurface(THREE);
 function typed(buffer,spec){const types={float32:Float32Array,uint16:Uint16Array,uint32:Uint32Array,int32:Int32Array};return new types[spec.type](buffer,spec.offset,spec.count);}
 async function texture(url,color=true){
   const key=url+color;if(textures.has(key))return textures.get(key);
+  url=liteConfig?.textures[url]||url;
   const promise=new THREE.TextureLoader().loadAsync(url).then(t=>{t.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;});textures.set(key,promise);return promise;
 }
 async function material(name,description){
@@ -81,12 +84,10 @@ diffuseColor.a*=vBrowMask*(1.0-browT*browT*browT*(browT*(browT*6.0-15.0)+10.0));
   materials[name]=m;
 }
 async function load(){
+  if(embedded){const configResponse=await fetch('assets/embed_lite/config.json');if(!configResponse.ok)throw new Error('본문용 화면 설정을 불러올 수 없습니다.');liteConfig=await configResponse.json();}
   const response=await fetch('assets/approved_v06/character.json');if(!response.ok)throw new Error('모델 목록을 불러올 수 없습니다.');manifest=await response.json();
-  const res=await fetch('assets/approved_v06/character.bin');if(!res.ok)throw new Error('모델 파일을 불러올 수 없습니다.');
-  const reader=res.body.getReader(),chunks=[];let count=0;
-  for(;;){const {done,value}=await reader.read();if(done)break;chunks.push(value);count+=value.length;$('loadingText').textContent=`캐릭터 불러오는 중 · ${Math.round(count/manifest.bytes*100)}%`;}
-  const bytes=new Uint8Array(count);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}const buffer=bytes.buffer;
-  if(count!==manifest.bytes)throw new Error('모델 파일이 완전히 내려받아지지 않았습니다. 새로고침해주세요.');
+  const buffer=await loadAssetBuffer('assets/approved_v06/character.bin',true);
+  if(buffer.byteLength!==manifest.bytes)throw new Error('모델 파일이 완전히 내려받아지지 않았습니다. 새로고침해주세요.');
   bones=manifest.bones.map(data=>{const b=new THREE.Bone();b.name=data.name;new THREE.Matrix4().fromArray(data.matrix).decompose(b.position,b.quaternion,b.scale);b.userData.tail=data.tail;return b;});
   manifest.bones.forEach((data,i)=>{(data.parent<0?root:bones[data.parent]).add(bones[i]);});root.updateMatrixWorld(true);
   bones.forEach(b=>rest.push({p:b.position.clone(),q:b.quaternion.clone(),s:b.scale.clone(),world:b.getWorldQuaternion(new THREE.Quaternion())}));
@@ -111,7 +112,7 @@ async function load(){
     root.add(mesh);if(part.skinned)mesh.bind(skeleton,new THREE.Matrix4());meshes.push(mesh);if(a.colorNeutral)faceMeshes.push(mesh);
   }
   root.updateMatrixWorld(true);
-  const cover=await (await fetch('assets/nape_cover_v02.json')).json();
+  const cover=JSON.parse(new TextDecoder().decode(await loadAssetBuffer('assets/nape_cover_v02.json')));
   const cg=new THREE.BufferGeometry(),countCover=cover.position.length/3;
   for(const [name,size]of [['position',3],['normal',3],['color',3]])cg.setAttribute(name,new THREE.Float32BufferAttribute(cover[name],size));
   cg.setIndex(cover.index);
@@ -129,8 +130,20 @@ async function load(){
   for(let i=0;i<240;i++){resetBones();root.updateMatrixWorld(true);braid.update(1/120);}
   state.face={...manifest.face_defaults};state.desired={...state.face};state.ready=true;
   setView('full');applyFace(true);$('loading').classList.add('hidden');$('status').textContent='드래그 · 회전 / 휠 · 확대';
-  window.characterStudio={state,manifest,scene,camera,meshes,bones,braid,shortHair,motion,renderer,setView,setExpression,setMode};upperChoices=await installUpperChoices(window.characterStudio);
+  window.characterStudio={state,manifest,scene,camera,meshes,bones,braid,shortHair,motion,renderer,setView,setExpression,setMode,loadAssetBuffer,embedded};upperChoices=await installUpperChoices(window.characterStudio);
  pendantReplay=await installPendantReplay(window.characterStudio);
+ if(embedded){$('lookAround').checked=!reduced;setMode('live');setView('portrait');if(reduced){state.paused=true;updateEmbedPause();}document.documentElement.dataset.ready='true';}
+}
+async function loadAssetBuffer(url,progress=false){
+  const packed=liteConfig?.binaries[url],usePacked=packed&&typeof DecompressionStream==='function';
+  const response=await fetch(usePacked?packed.url:url);
+  if(!response.ok)throw new Error('캐릭터 데이터를 불러올 수 없습니다.');
+  let body=response.body;
+  if(progress){let received=0;const total=usePacked?packed.bytes:manifest.bytes;body=body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;$('loadingText').textContent=`캐릭터 불러오는 중 · ${Math.min(100,Math.round(received/total*100))}%`;controller.enqueue(chunk);}}));}
+  if(usePacked)body=body.pipeThrough(new DecompressionStream('gzip'));
+  const buffer=await new Response(body).arrayBuffer();
+  if(usePacked&&buffer.byteLength!==packed.decodedBytes)throw new Error('캐릭터 데이터 크기를 확인할 수 없습니다.');
+  return buffer;
 }
 function resetBones(){bones.forEach((b,i)=>{b.position.copy(rest[i].p);b.quaternion.copy(rest[i].q);b.scale.copy(rest[i].s);});}
 function rotateBone(name,yaw,pitch,roll=0){const i=bones.findIndex(b=>b.name===name);if(i<0)return;
@@ -150,11 +163,12 @@ function setMode(mode){state.mode=mode;state.pointer.set(0,0);state.look.set(0,0
   state.nextBlink=state.time+2.2;state.blinkStart=-100;
   $('orbitMode').classList.toggle('active',mode==='orbit');$('liveMode').classList.toggle('active',mode==='live');$('orbitMode').setAttribute('aria-pressed',String(mode==='orbit'));$('liveMode').setAttribute('aria-pressed',String(mode==='live'));
   document.querySelector('.stage').classList.toggle('live',mode==='live');$('modeNote').textContent=mode==='live'?'고개와 몸이 함께 반응하고, 숨을 쉽니다.':'드래그해 돌려보고, 휠로 가까이 보세요.';
-  $('stageLabel').textContent=mode==='live'?'몸 반응 · 호흡 · 헤어 물리':'P5 · 바위와 경사 지형';setView(mode==='live'?'face':'full');
+  $('stageLabel').textContent=mode==='live'?'몸 반응 · 호흡 · 헤어 물리':'P5 · 바위와 경사 지형';setView(mode==='live'?(embedded?'portrait':'face'):'full');
+  if(embedded){$('embedMode').textContent=mode==='live'?'360도 감상':'살아있는 캐릭터';$('embedMode').setAttribute('aria-pressed',String(mode==='live'));}
 }
 function setView(view){
-  const target=['face','nape','beauty'].includes(view)?new THREE.Vector3(.01,1.49,-.03):new THREE.Vector3(0,1.0,0);
-  const pos={full:[1.5,1.6,3.35],face:[.03,1.47,1.2],beauty:[.03,1.50,.70],nape:[.01,1.53,-1.06],front:[0,1.45,3.5],back:[0,1.55,-3.5],side:[3.5,1.5,0]}[view]||[0,1.45,3.5];
+  const target=view==='portrait'?new THREE.Vector3(.01,1.35,-.03):['face','nape','beauty'].includes(view)?new THREE.Vector3(.01,1.49,-.03):new THREE.Vector3(0,1.0,0);
+  const pos={portrait:[.04,1.40,Math.max(1.85,1.15/camera.aspect)],full:[1.5,1.6,3.35],face:[.03,1.47,1.2],beauty:[.03,1.50,.70],nape:[.01,1.53,-1.06],front:[0,1.45,3.5],back:[0,1.55,-3.5],side:[3.5,1.5,0]}[view]||[0,1.45,3.5];
   camera.position.set(...pos);controls.target.copy(target);controls.update();
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
 }
@@ -187,7 +201,7 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
 $('orbitMode').onclick=()=>setMode('orbit');$('liveMode').onclick=()=>setMode('live');$('resetFace').onclick=()=>setExpression('neutral');
 $('reset').onclick=()=>{setView(state.mode==='live'?'face':'full');state.pointer.set(0,0);state.look.set(0,0);};
 $('rotate').onclick=()=>{controls.autoRotate=!controls.autoRotate;$('rotate').setAttribute('aria-pressed',String(controls.autoRotate));};
-$('pause').onclick=()=>{state.paused=!state.paused;$('pause').setAttribute('aria-pressed',String(state.paused));$('pause').textContent=state.paused?'▶ 움직임 재생':'Ⅱ 움직임 멈춤';};
+$('pause').onclick=()=>{state.paused=!state.paused;$('pause').setAttribute('aria-pressed',String(state.paused));$('pause').textContent=state.paused?'▶ 움직임 재생':'Ⅱ 움직임 멈춤';if(embedded)updateEmbedPause();};
 $('hat').onchange=()=>meshes.filter(m=>m.name==='hat').forEach(m=>m.visible=$('hat').checked);
 $('mouth').oninput=()=>{state.desired.Face_Mouth_Open=+$('mouth').value/100;$('mouthValue').value=$('mouth').value+'%';};
 $('blink').oninput=()=>{state.desired.Face_Blink_L=state.desired.Face_Blink_R=+$('blink').value/100;$('blinkValue').value=$('blink').value+'%';};
@@ -224,6 +238,12 @@ canvas.addEventListener('keydown',e=>{
   if(['ArrowLeft','ArrowRight'].includes(e.key)){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new THREE.Vector3(0,1,0),e.key==='ArrowLeft'?.14:-.14);camera.position.copy(controls.target).add(v);controls.update();e.preventDefault();}
   if(e.key==='+'||e.key==='-'){camera.position.sub(controls.target).multiplyScalar(e.key==='+'?.9:1.1).add(controls.target);controls.update();e.preventDefault();}
 });
+function updateEmbedPause(){const button=$('embedPause');if(!button)return;button.textContent=state.paused?'움직임 재생':'움직임 멈춤';button.setAttribute('aria-pressed',String(state.paused));}
+if(embedded){
+  $('embedMode').onclick=()=>setMode(state.mode==='live'?'orbit':'live');
+  $('embedPause').onclick=()=>$('pause').click();
+  new IntersectionObserver(entries=>{embedVisible=entries[0].isIntersecting;previous=performance.now();if(braid)braid.accumulator=0;if(shortHair)shortHair.accumulator=0;}).observe(canvas);
+}
 const resize=()=>{const box=canvas.getBoundingClientRect();renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix();};
 new ResizeObserver(resize).observe(canvas.parentElement);resize();
 let previous=performance.now(),frames=0,fpsStart=previous,renderFailures=[];
@@ -232,8 +252,9 @@ renderer.debug.onShaderError=(gl,program,vs,fs)=>{const message=gl.getShaderInfo
 document.addEventListener('visibilitychange',()=>{previous=performance.now();if(braid)braid.accumulator=0;if(shortHair)shortHair.accumulator=0;});
 function frame(now){
   requestAnimationFrame(frame);
-  const dt=Math.min((now-previous)/1000,.04);previous=now;
-  if(document.hidden)return;
+  if(document.hidden||(embedded&&!embedVisible)){previous=now;return;}
+  if(embedded&&now-previous<1000/30)return;
+  const dt=Math.min((now-previous)/1000,embedded ? .065 : .04);previous=now;
   if(state.ready){
     if(!state.paused)state.time+=dt;
     const live=state.mode==='live'&&!state.paused;
@@ -262,4 +283,4 @@ function frame(now){
   }
 }
 requestAnimationFrame(frame);
-load().catch(error=>{console.error(error);$('loadingText').textContent=error.message+' 실행 파일로 서버를 켠 뒤 다시 열어주세요.';document.querySelector('.loader').style.display='none';});
+load().catch(error=>{console.error(error);$('loadingText').textContent=error.message+' 잠시 후 새로고침해주세요.';document.querySelector('.loader').style.display='none';});
