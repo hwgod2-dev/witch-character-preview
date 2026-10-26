@@ -257,7 +257,8 @@ document.addEventListener('visibilitychange',()=>{previous=performance.now();if(
 function frame(now){
   requestAnimationFrame(frame);
   if(document.hidden||(embedded&&!embedVisible)){previous=now;return;}
-  if(embedded&&now-previous<1000/30)return;
+  // Tolerate RAF timestamp jitter so a 30 Hz callback is not needlessly cut to 15 Hz.
+  if(embedded&&now-previous<1000/30-1)return;
   const dt=Math.min((now-previous)/1000,embedded ? .065 : .04);previous=now;
   if(state.ready){
     if(!state.paused)state.time+=dt;
