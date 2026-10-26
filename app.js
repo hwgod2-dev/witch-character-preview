@@ -181,6 +181,8 @@ function applyFace(force=false,blinkPulse=0){
     part.morphs.forEach((target,i)=>mesh.morphTargetInfluences[i]=Math.max(0,(f[target.name]||0)*Math.sign(target.value)));
   }
   const key=[f.Face_Blink_L,f.Face_Blink_R,f.Face_Mouth_Open,f.Face_Blush].map(v=>(v||0).toFixed(3)).join('/');if(!force&&key===state.lastColorKey)return;state.lastColorKey=key;
+  // The embed uses the dense UV surface shader, so its unused vertex colors need no per-frame upload.
+  if(embedded&&faceSurface.enabled){for(const mesh of faceMeshes){const u=mesh.material.userData.faceUniforms;u.uBlinkL.value=f.Face_Blink_L;u.uBlinkR.value=f.Face_Blink_R;u.uMouth.value=f.Face_Mouth_Open||0;}return;}
   for(const mesh of faceMeshes){
     const {part,arrays:a}=mesh.userData, full=mesh.geometry.attributes.faceFull.array, correction=mesh.geometry.attributes.color.array;
     full.set(a.colorNeutral);
